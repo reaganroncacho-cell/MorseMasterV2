@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Morse Master 2</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui;background:#0b1020;color:#fff;min-height:100vh}
+.app{max-width:600px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:900;font-size:27px}.pill{background:#171f38;border:1px solid #303c60;border-radius:20px;padding:8px 12px}
+.card{background:#141b30;border:1px solid #293556;border-radius:24px;padding:18px;margin:14px 0;box-shadow:0 10px 30px #0005}
+.hero{background:linear-gradient(145deg,#172344,#10172a)}h2{margin:5px 0;font-size:26px}.muted{color:#aab4cf}
+.xpbar{height:12px;background:#080c17;border-radius:20px;overflow:hidden;margin:12px 0}.xp{height:100%;width:0%;background:#8aa7ff;transition:.35s}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{text-align:center;background:#0e1527;border-radius:16px;padding:10px}.stat b{font-size:22px;display:block}.stat small{color:#8f9bb7}
+.btn{border:0;border-radius:16px;padding:15px;width:100%;font-weight:800;font-size:16px;background:#f2f5ff;color:#101523;margin-top:9px}.btn.alt{background:#242f4b;color:white}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid .btn{margin:0}.morse{font-size:48px;text-align:center;letter-spacing:8px;padding:18px 0;min-height:82px}.question{text-align:center;color:#aab4cf}.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}.answers .btn{margin:0;background:#202b47;color:white}.answers .good{background:#1f8b59}.answers .bad{background:#9e3948}.feedback{text-align:center;min-height:25px;margin:10px;font-weight:800}
+.badge{display:inline-block;background:#253252;border-radius:14px;padding:6px 10px;margin:3px;font-size:13px}.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.nav .btn{margin:0;padding:12px}.hidden{display:none}
+#toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);background:#fff;color:#111;padding:12px 18px;border-radius:20px;font-weight:800;display:none}
+</style></head><body><div class="app">
+<div class="top"><div class="logo">MORSE MASTER</div><div class="pill">Coins: <b id="coins">0</b></div></div>
+<div class="card hero"><span class="badge">MISSION</span><h2>Decode the Signal</h2><div class="muted">Answer correctly to earn XP, build your streak, and unlock harder signals.</div>
+<div class="xpbar"><div class="xp" id="xp"></div></div><div class="muted" id="levelText">Level 1 • 0 / 100 XP</div></div>
+<div class="card"><div class="stats"><div class="stat"><b id="score">0</b><small>Score</small></div><div class="stat"><b id="streak">0</b><small>Streak</small></div><div class="stat"><b id="best">0</b><small>Best</small></div></div></div>
+<div class="card">
+<div class="question" id="q">What letter is this signal?</div><div class="morse" id="morse">.-</div>
+<div class="answers" id="answers"></div><div class="feedback" id="feedback"></div>
+<button class="btn alt" id="next">Next Signal</button></div>
+<div class="card"><b>Game Mode</b><div class="grid" style="margin-top:10px"><button class="btn" id="m2l">Morse → Letter</button><button class="btn alt" id="l2m">Letter → Morse</button></div>
+<div class="grid" style="margin-top:9px"><button class="btn alt" id="daily">Daily Challenge</button><button class="btn alt" id="sound">Sound: ON</button></div></div>
+<div class="card"><b>Achievements</b><div id="ach" class="muted" style="margin-top:8px"></div></div>
+<div class="card"><b>Difficulty</b><div class="nav" style="margin-top:10px"><button class="btn" data-d="easy">Easy</button><button class="btn alt" data-d="medium">Medium</button><button class="btn alt" data-d="hard">Hard</button></div></div>
+<div class="footer muted" style="text-align:center;font-size:12px">Offline game • Progress saves automatically</div>
+</div><div id="toast"></div>
+<script>
+const C={A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..'};
+const L=Object.keys(C);let st=JSON.parse(localStorage.morseV2||'{}');
+st={score:0,streak:0,best:0,coins:0,xp:0,level:1,mode:'m2l',difficulty:'easy',sound:true,...st};
+let cur='',answered=false;
+const $=x=>document.getElementById(x);
+function save(){localStorage.morseV2=JSON.stringify(st)}
+function toast(t){$('toast').textContent=t;$('toast').style.display='block';setTimeout(()=>{$('toast').style.display='none'},1300)}
+function pool(){return st.difficulty==='easy'?L.filter(x=>'ETIANMSOHURW'.includes(x)):L}
+function beep(s){if(!st.sound)return;let A=window.AudioContext||window.webkitAudioContext;if(!A)return;let a=new A(),t=a.currentTime;s.split('').forEach(x=>{let d=x==='.'?.08:.24,o=a.createOscillator(),g=a.createGain();o.frequency.value=650;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d);t+=d+.07})}
+function question(){
+answered=false;$('feedback').textContent='';let p=pool();cur=p[Math.floor(Math.random()*p.length)];
+$('q').textContent=st.mode==='m2l'?'What letter is this signal?':'What is the Morse code for this letter?';
+$('morse').textContent=st.mode==='m2l'?C[cur]:cur;beep(C[cur]);
+let vals=[cur];while(vals.length<4){let x=p[Math.floor(Math.random()*p.length)];if(!vals.includes(x))vals.push(x)}
+vals.sort(()=>Math.random()-.5);$('answers').innerHTML='';
+vals.forEach(v=>{let b=document.createElement('button');b.className='btn';b.textContent=st.mode==='m2l'?v:C[v];b.onclick=()=>answer(v,b);$('answers').appendChild(b)})
+}
+function answer(v,b){if(answered)return;answered=true;let ok=v===cur;
+if(ok){st.score+=10;st.streak++;st.coins+=2;st.xp+=10; b.classList.add('good');$('feedback').textContent='Correct! +10 XP'}
+else{st.streak=0;b.classList.add('bad');$('feedback').textContent='Correct answer: '+(st.mode==='m2l'?cur:C[cur])}
+if(st.streak>st.best)st.best=st.streak;
+if(st.xp>=100){st.xp-=100;st.level++;st.coins+=20;toast('LEVEL UP! +20 coins')}
+save();render();if(ok&&st.streak%5===0)toast('STREAK '+st.streak+'!')}
+function render(){$('score').textContent=st.score;$('streak').textContent=st.streak;$('best').textContent=st.best;$('coins').textContent=st.coins;$('xp').style.width=st.xp+'%';$('levelText').textContent=`Level ${st.level} • ${st.xp} / 100 XP`;
+let a=[];if(st.best>=5)a.push('5-Streak');if(st.best>=10)a.push('10-Streak');if(st.level>=3)a.push('Level 3');$('ach').innerHTML=a.length?a.map(x=>`<span class="badge">${x}</span>`).join(''):'No achievements yet — keep playing!';
+}
+$('next').onclick=question;$('m2l').onclick=()=>{st.mode='m2l';save();question()};$('l2m').onclick=()=>{st.mode='l2m';save();question()};
+$('sound').onclick=()=>{st.sound=!st.sound;save();$('sound').textContent='Sound: '+(st.sound?'ON':'OFF')};
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{st.difficulty=b.dataset.d;save();question()});
+$('daily').onclick=()=>{st.xp=Math.min(99,st.xp+5);st.coins+=5;save();render();toast('Daily bonus: +5 coins +5 XP')};
+$('sound').textContent='Sound: '+(st.sound?'ON':'OFF');render();question();
+</script></body></html>
